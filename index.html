@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Diário do Carro</title>
+<meta name="description" content="Manutenção do carro: extrato de serviços, trocas e alertas.">
+<meta name="theme-color" content="#0a2766">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Diário Carro">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap">
+<style>
+/* Layout: app de banco em coluna única — cartão de saldo no topo, extrato por mês, barra de navegação fixa embaixo */
+:root{
+  --bg:#edf2fa; --surface:#ffffff; --surface-2:#f4f7fd; --fg:#0c1a33; --muted:#5a6a86; --line:#dbe3f0;
+  --accent:#1d5cff; --accent-ink:#ffffff; --accent-soft:#e2ebff;
+  --hero-1:#0a2766; --hero-2:#1d5cff; --hero-ink:#ffffff; --hero-muted:rgba(255,255,255,.72); --hero-chip:rgba(255,255,255,.14);
+  --ok:#17845a; --ok-soft:#dcf3e8; --warn:#a96a0c; --warn-soft:#fdf0d8; --bad:#cf2f48; --bad-soft:#fde3e7;
+  --shadow:0 1px 2px rgba(12,26,51,.06),0 8px 24px rgba(12,26,51,.06);
+  --font-display:"Sora",ui-sans-serif,system-ui,sans-serif;
+  --font-body:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:18px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#060c18; --surface:#0e182c; --surface-2:#131f38; --fg:#e7edf9; --muted:#8c9dbd; --line:#1d2a45;
+  --accent:#5089ff; --accent-ink:#ffffff; --accent-soft:#16264a;
+  --hero-1:#0a1f5c; --hero-2:#2559e6; --hero-ink:#ffffff; --hero-muted:rgba(255,255,255,.7); --hero-chip:rgba(255,255,255,.12);
+  --ok:#3cc28a; --ok-soft:#10301f; --warn:#f0b452; --warn-soft:#33260c; --bad:#ff6c80; --bad-soft:#3a1219;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#060c18; --surface:#0e182c; --surface-2:#131f38; --fg:#e7edf9; --muted:#8c9dbd; --line:#1d2a45;
+  --accent:#5089ff; --accent-ink:#ffffff; --accent-soft:#16264a;
+  --hero-1:#0a1f5c; --hero-2:#2559e6; --hero-ink:#ffffff; --hero-muted:rgba(255,255,255,.7); --hero-chip:rgba(255,255,255,.12);
+  --ok:#3cc28a; --ok-soft:#10301f; --warn:#f0b452; --warn-soft:#33260c; --bad:#ff6c80; --bad-soft:#3a1219;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+}
+*{box-sizing:border-box}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+body{overscroll-behavior-y:none}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 calc(96px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
+.app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;min-width:0}
+.view{display:flex;flex-direction:column;gap:20px;width:100%;min-width:0}
+.view>*,.sec>*{min-width:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.num{font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* topo */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:12px;padding-block:14px 6px}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.top .who{min-width:0;flex:1}
+.top .hello{font-size:12px;color:var(--muted)}
+.top .car{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--fg);flex:none}
+
+/* cartão saldo */
+.hero{border-radius:24px;padding:18px;color:var(--hero-ink);background:
+  radial-gradient(120% 90% at 100% 0%,rgba(255,255,255,.18),transparent 55%),
+  linear-gradient(140deg,var(--hero-1),var(--hero-2));box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-40px;bottom:-60px;width:200px;height:200px;border-radius:50%;border:28px solid rgba(255,255,255,.06)}
+.hero-label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--hero-muted);letter-spacing:.02em}
+.eye{background:none;border:0;color:var(--hero-ink);padding:4px;display:grid;place-items:center;border-radius:8px}
+.hero-total{font-family:var(--font-display);font-size:clamp(28px,8.5vw,34px);font-weight:600;letter-spacing:-.02em;line-height:1.05}
+.hero-sub{font-size:13px;color:var(--hero-muted)}
+.hero-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative;z-index:1}
+.hchip{background:var(--hero-chip);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.hchip small{font-size:11px;color:var(--hero-muted);text-transform:uppercase;letter-spacing:.06em}
+.hchip b{font-family:var(--font-display);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* atalhos */
+.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.qa{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--fg);padding:0}
+.qa span.ic{width:min(54px,100%);aspect-ratio:1;max-width:100%;border-radius:18px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--accent)}
+
+/* seções */
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.sec-h h2{margin:0;font-family:var(--font-display);font-size:17px;font-weight:600;letter-spacing:-.01em}
+.sec-h .link{background:none;border:0;color:var(--accent);font-weight:600;font-size:13px;padding:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.banner{border-radius:14px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);color:var(--fg)}
+.banner b{font-weight:700}
+.banner .act{margin-left:auto;flex:none;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:6px 10px;font-weight:600;font-size:12px}
+.banner.warn{background:var(--warn-soft)}
+
+/* próximas */
+.due{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.due + .due{border-top:1px solid var(--line)}
+.due .t{min-width:0;flex:1}
+.due .t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.due .t span{font-size:12px;color:var(--muted)}
+.pill{font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px;white-space:nowrap;letter-spacing:.02em}
+.pill.ok{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:13px}
+
+/* filtros */
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 12px;color:var(--muted)}
+.search input{font-size:16px;-webkit-appearance:none;appearance:none;border:0;background:none;outline:0;flex:1;min-width:0;padding:11px 0;color:var(--fg)}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* extrato */
+.month{display:flex;justify-content:space-between;align-items:baseline;padding:14px 14px 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;width:100%;background:none;border:0;text-align:left}
+.row:active{background:var(--surface-2)}
+.cat-ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none;color:#fff}
+.row .t{min-width:0;flex:1}
+.row .t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t span{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .v{text-align:right;flex:none}
+.row .v b{display:block;font-weight:600}
+.row .v span{font-size:12px;color:var(--muted)}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+
+/* resumo */
+.kpis{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi small{font-size:12px;color:var(--muted)}
+.kpi b{font-family:var(--font-display);font-size:19px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.bars{padding:6px 14px 14px;display:flex;flex-direction:column;gap:12px}
+.bar-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+.bar-row .n{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;min-width:0}
+.bar-row .n i{width:10px;height:10px;border-radius:3px;flex:none}
+.bar-row .amt{font-size:13px;font-weight:600}
+.track{grid-column:1/-1;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.track i{display:block;height:100%;border-radius:99px}
+.bar-row .pct{font-size:11px;color:var(--muted);font-weight:500}
+
+/* ajustes */
+.form-card{padding:16px;display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em}
+.field input,.field textarea,.field select{width:100%;min-width:0;display:block;font-size:16px;-webkit-appearance:none;appearance:none;min-height:46px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:11px 12px;outline:0}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:72px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.field input[type="date"]{text-align:left}
+.field input[type="date"]::-webkit-date-and-time-value{text-align:left}
+.btn{border:0;border-radius:14px;padding:13px 16px;font-weight:600;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn.ghost{background:var(--surface-2);color:var(--fg);border:1px solid var(--line)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.danger.armed{background:var(--bad);color:#fff}
+.menu-row{display:flex;align-items:center;gap:12px;padding:14px;width:100%;background:none;border:0;text-align:left}
+.menu-row + .menu-row{border-top:1px solid var(--line)}
+.menu-row .mi{width:38px;height:38px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.menu-row .t{flex:1;min-width:0}
+.menu-row .t b{display:block;font-weight:600}
+.menu-row .t span{font-size:12px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.paste{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+
+/* navegação */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
+  padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.nav-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 72px 1fr 1fr;align-items:center}
+.tab{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--muted);padding:4px 0}
+.tab[aria-current="page"]{color:var(--accent)}
+.fab{width:56px;height:56px;border-radius:18px;border:0;background:linear-gradient(140deg,var(--hero-1),var(--hero-2));color:#fff;display:grid;place-items:center;justify-self:center;margin-top:-26px;box-shadow:0 8px 20px rgba(29,92,255,.35)}
+
+/* folha (formulário) */
+.overlay{position:fixed;inset:0;z-index:40;background:rgba(4,10,24,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow-y:auto;border-radius:24px 24px 0 0;
+  padding:8px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  display:flex;flex-direction:column;gap:14px;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.grab{width:40px;height:4px;border-radius:9px;background:var(--line);align-self:center;margin-bottom:4px}
+.sheet h3{margin:0;font-family:var(--font-display);font-size:19px;font-weight:600}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cat-pick{display:flex;flex-wrap:wrap;gap:8px}
+.cat-pick button{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px 6px 6px;font-size:13px;display:flex;align-items:center;gap:6px}
+.cat-pick button i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.cat-pick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.parts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.part{display:flex;line-height:1.25;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:500;text-align:left;min-width:0}
+.part .box{width:20px;height:20px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;flex:none;color:transparent}
+.part[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.part[aria-pressed="true"] .box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.parts-tools{display:flex;justify-content:space-between;align-items:center}
+.parts-tools button{background:none;border:0;color:var(--accent);font-weight:600;font-size:12px;padding:2px}
+.row .t .pl{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;white-space:normal;overflow:visible}
+.row .t .pl em{white-space:nowrap}
+.row .pl em{font-style:normal;font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:1px 6px}
+.lastp{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.lastp + .lastp{border-top:1px solid var(--line)}
+.lastp .t{flex:1;min-width:0}
+.lastp .t b{display:block;font-weight:600}
+.lastp .t span{font-size:12px;color:var(--muted)}
+.lastp .ago{font-size:12px;font-weight:600;color:var(--muted);text-align:right}
+@media (max-width:360px){.parts{grid-template-columns:1fr}}
+.money{position:relative}
+.money span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:600}
+.money input{padding-left:38px;font-family:var(--font-display);font-weight:600;font-size:17px}
+.next-box{border:1px dashed var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.next-box p{margin:0;font-size:13px;font-weight:600}
+.next-box p span{font-weight:400;color:var(--muted)}
+.actions{display:flex;gap:10px}
+.actions .btn{flex:1}
+.err{color:var(--bad);font-size:12px;min-height:1em}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--fg);color:var(--bg);
+  padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+@media (max-width:360px){.kpis{grid-template-columns:1fr}.hchip small{font-size:10px}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="avatar" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14v-4l-2-5H7l-2 5z"/><path d="M5 13h14"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg>
+    </div>
+    <div class="who">
+      <div class="hello" id="plate">Meu veículo</div>
+      <div class="car" id="carName">Seu carro</div>
+    </div>
+    <button class="icon-btn" id="topSettings" aria-label="Ajustes">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <!-- INÍCIO -->
+  <main id="view-home" class="view">
+    <section class="hero" aria-label="Resumo de gastos">
+      <div class="hero-label">Total investido no carro
+        <button class="eye" id="eyeBtn" aria-label="Ocultar valores"></button>
+      </div>
+      <div class="hero-total num" id="heroTotal">R$ 0,00</div>
+      <div class="hero-sub num" id="heroSub"></div>
+      <div class="hero-chips">
+        <div class="hchip"><small>KM atual</small><b class="num" id="heroKm">0</b></div>
+        <div class="hchip"><small>Este ano</small><b class="num" id="heroYear">R$ 0</b></div>
+        <div class="hchip"><small>Última</small><b class="num" id="heroLast">—</b></div>
+      </div>
+    </section>
+
+    <div class="quick">
+      <button class="qa" data-quick="oleo"><span class="ic" data-ic="oleo"></span>Óleo</button>
+      <button class="qa" data-quick="revisao"><span class="ic" data-ic="revisao"></span>Revisão</button>
+      <button class="qa" data-quick="pneus"><span class="ic" data-ic="pneus"></span>Pneus</button>
+      <button class="qa" data-quick="km"><span class="ic" data-ic="km"></span>KM atual</button>
+    </div>
+
+    <div id="banners" class="sec"></div>
+
+    <section class="sec">
+      <div class="sec-h"><h2>Próximas manutenções</h2></div>
+      <div class="card" id="dueList"></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h"><h2>Extrato</h2><span class="note num" id="countLbl"></span></div>
+      <label class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Buscar serviço, oficina…" autocomplete="off">
+      </label>
+      <div class="chips" id="filterChips"></div>
+      <div class="card" id="history"></div>
+    </section>
+  </main>
+
+  <!-- RESUMO -->
+  <main id="view-summary" class="view" hidden>
+    <div class="sec-h" style="padding-top:4px"><h2 style="font-size:22px">Resumo de gastos</h2></div>
+    <div class="kpis" id="kpis"></div>
+    <section class="sec">
+      <div class="sec-h"><h2>Por categoria</h2></div>
+      <div class="card"><div class="bars" id="catBars"></div></div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Última troca de cada item</h2></div>
+      <div class="card" id="lastParts"></div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Por ano</h2></div>
+      <div class="card"><div class="bars" id="yearBars"></div></div>
+    </section>
+  </main>
+
+  <!-- AJUSTES -->
+  <main id="view-settings" class="view" hidden>
+    <div class="sec-h" style="padding-top:4px"><h2 style="font-size:22px">Ajustes</h2></div>
+    <section class="sec">
+      <div class="sec-h"><h2>Veículo</h2></div>
+      <form class="card form-card" id="vehForm">
+        <div class="field"><label for="vName">Modelo</label><input id="vName" placeholder="Ex.: Onix 1.0 Turbo" maxlength="60"></div>
+        <div class="grid2">
+          <div class="field"><label for="vPlate">Placa</label><input id="vPlate" placeholder="ABC1D23" maxlength="8" style="text-transform:uppercase"></div>
+          <div class="field"><label for="vYear">Ano</label><input id="vYear" inputmode="numeric" placeholder="2022" maxlength="4"></div>
+        </div>
+        <div class="field"><label for="vKm">KM atual no painel</label><input id="vKm" inputmode="numeric" placeholder="Ex.: 52.300" class="num"></div>
+        <button class="btn" type="submit">Salvar veículo</button>
+      </form>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h"><h2>Backup</h2><span class="note" id="lastBackup"></span></div>
+      <div class="card">
+        <button class="menu-row" id="exportJson">
+          <span class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span>
+          <span class="t"><b>Salvar backup</b><span>Gera um arquivo .json. Salve em Arquivos, iCloud ou mande no WhatsApp.</span></span>
+        </button>
+        <button class="menu-row" id="importBtn">
+          <span class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg></span>
+          <span class="t"><b>Restaurar backup</b><span>Escolha o arquivo .json salvo no outro celular.</span></span>
+        </button>
+        <input type="file" id="fileIn" accept=".json,application/json,text/plain" hidden>
+        <button class="menu-row" id="copyBtn">
+          <span class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></span>
+          <span class="t"><b>Copiar / colar backup</b><span>Alternativa em texto, caso o arquivo não funcione.</span></span>
+        </button>
+        <div class="paste" id="pasteBox" hidden>
+          <div class="field"><label for="pasteTa">Texto do backup</label><textarea id="pasteTa" rows="4" placeholder="Cole aqui o texto do backup"></textarea></div>
+          <div class="actions">
+            <button class="btn ghost" id="copyNow" type="button">Copiar meus dados</button>
+            <button class="btn" id="pasteNow" type="button">Restaurar do texto</button>
+          </div>
+        </div>
+        <button class="menu-row" id="exportCsv">
+          <span class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 3v18"/></svg></span>
+          <span class="t"><b>Exportar planilha</b><span>Arquivo .csv para abrir no Excel ou Google Sheets.</span></span>
+        </button>
+      </div>
+      <div class="card" id="importConfirm" hidden>
+        <div class="form-card">
+          <div id="importInfo" class="note" style="font-size:14px;color:var(--fg)"></div>
+          <div class="actions">
+            <button class="btn ghost" id="impMerge" type="button">Juntar com atuais</button>
+            <button class="btn" id="impReplace" type="button">Substituir tudo</button>
+          </div>
+          <button class="btn ghost" id="impCancel" type="button">Cancelar</button>
+        </div>
+      </div>
+      <p class="note" id="storageNote">Os dados ficam guardados só neste aparelho, sem nuvem. Antes de trocar de celular, salve um backup e restaure no aparelho novo. Apagar o app da tela de início apaga os dados junto.</p>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h"><h2>Zona de cuidado</h2></div>
+      <button class="btn danger" id="wipeBtn" type="button">Apagar todos os registros</button>
+    </section>
+  </main>
+</div>
+
+<nav class="nav" aria-label="Navegação">
+  <div class="nav-in">
+    <button class="tab" data-view="home" aria-current="page">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Início</button>
+    <button class="tab" data-view="summary">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>Resumo</button>
+    <button class="fab" id="fab" aria-label="Novo registro">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="tab" data-view="due">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Alertas</button>
+    <button class="tab" data-view="settings">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Backup</button>
+  </div>
+</nav>
+
+<!-- Formulário -->
+<div class="overlay" id="overlay" hidden>
+  <form class="sheet" id="entryForm" novalidate>
+    <div class="grab"></div>
+    <div class="sheet-h"><h3 id="formTitle">Nova manutenção</h3>
+      <button type="button" class="icon-btn" id="closeForm" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="field"><label>Categoria</label><div class="cat-pick" id="catPick"></div></div>
+    <div class="field" id="partsField" hidden>
+      <div class="parts-tools"><label>O que foi trocado</label><button type="button" id="partsAll">Marcar tudo</button></div>
+      <div class="parts" id="partsPick"></div>
+    </div>
+    <div class="field"><label for="fDesc">Descrição *</label><input id="fDesc" placeholder="Ex.: Troca de óleo 5W30 + filtro" maxlength="90"></div>
+    <div class="field"><label for="fValue">Valor</label><div class="money"><span>R$</span><input id="fValue" inputmode="decimal" placeholder="0,00" class="num"></div></div>
+    <div class="grid2">
+      <div class="field"><label for="fDate">Data *</label><input id="fDate" type="date"></div>
+      <div class="field"><label for="fKm">KM *</label><input id="fKm" inputmode="numeric" placeholder="48.200" class="num"></div>
+    </div>
+    <div class="field"><label for="fShop">Oficina / local</label><input id="fShop" placeholder="Ex.: Auto Center do Zé" maxlength="60" list="shopList"><datalist id="shopList"></datalist></div>
+    <div class="next-box">
+      <p>Próxima troca <span>(opcional — vira um alerta)</span></p>
+      <div class="grid2">
+        <div class="field"><label for="fNextKm">Com quantos KM</label><input id="fNextKm" inputmode="numeric" placeholder="58.200" class="num"></div>
+        <div class="field"><label for="fNextDate">Ou na data</label><input id="fNextDate" type="date"></div>
+      </div>
+      <div class="chips" id="nextQuick"></div>
+    </div>
+    <div class="field"><label for="fNotes">Observações</label><textarea id="fNotes" placeholder="Peças trocadas, marca do óleo, garantia…" maxlength="500"></textarea></div>
+    <div class="err" id="formErr" role="alert"></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="delBtn" hidden>Excluir</button>
+      <button type="submit" class="btn">Salvar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Atualizar KM -->
+<div class="overlay" id="kmOverlay" hidden>
+  <form class="sheet" id="kmForm" novalidate>
+    <div class="grab"></div>
+    <div class="sheet-h"><h3>Atualizar KM</h3>
+      <button type="button" class="icon-btn" id="closeKm" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <p class="note" style="margin:0">Informe o que está no painel agora. Os alertas de "faltam X km" usam esse número.</p>
+    <div class="field"><label for="kmNow">KM no painel</label><input id="kmNow" inputmode="numeric" class="num" placeholder="52.300" style="font-family:var(--font-display);font-size:22px;font-weight:600"></div>
+    <button type="submit" class="btn">Salvar KM</button>
+  </form>
+</div>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+const KEY='diario-do-carro-v1';
+const CATS=[
+ {id:'oleo',name:'Óleo',color:'#e8961a',icon:'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',every:{km:10000,months:12}},
+ {id:'revisao',name:'Revisão',color:'#1d5cff',icon:'M9 4h6v3H9zM7 5.5H5.5V21h13V5.5H17M9 13.5l2 2 4-4',every:{km:10000,months:12}},
+ {id:'pneus',name:'Pneus',color:'#4b5b74',icon:'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16zM12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7z',every:{km:10000,months:12}},
+ {id:'freios',name:'Freios',color:'#cf2f48',icon:'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16zM12 10a2 2 0 1 0 0 4a2 2 0 1 0 0-4zM4 12h4M16 12h4',every:{km:20000,months:24}},
+ {id:'suspensao',name:'Suspensão',color:'#7246f0',icon:'M7 4h10M7 20h10M8 7l8 2.5L8 12l8 2.5L8 17',every:{km:40000,months:36}},
+ {id:'eletrica',name:'Elétrica',color:'#0d9c9a',icon:'M13 3 5 13h6l-1 8 8-10h-6l1-8z',every:{km:0,months:24}},
+ {id:'filtros',name:'Filtros',color:'#178a45',icon:'M4 5h16l-6 7.5V19l-4 2v-8.5z',every:{km:10000,months:12}},
+ {id:'estetica',name:'Estética',color:'#d93a8c',icon:'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',every:{km:0,months:6}},
+ {id:'docs',name:'Documentos',color:'#5d6b82',icon:'M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5',every:{km:0,months:12}},
+ {id:'outros',name:'Outros',color:'#2f6bc4',icon:'M14.7 6.3a4 4 0 0 0-5.4 5L4 16.6 7.4 20l5.3-5.3a4 4 0 0 0 5-5.4l-2.6 2.6-2.4-.6-.6-2.4z',every:null}
+];
+const CAT=Object.fromEntries(CATS.map(c=>[c.id,c]));
+const PARTS=[
+ {id:'oleo_motor',name:'Óleo do motor'},
+ {id:'filtro_oleo',name:'Filtro de óleo'},
+ {id:'filtro_ar',name:'Filtro de ar do motor'},
+ {id:'filtro_cabine',name:'Filtro do ar-condicionado'},
+ {id:'filtro_comb',name:'Filtro de combustível'}
+];
+const PART=Object.fromEntries(PARTS.map(p=>[p.id,p]));
+const PART_CATS=['oleo','filtros'];
+function partsOf(e){return Array.isArray(e.parts)?e.parts.filter(p=>PART[p]):[]}
+const $=s=>document.querySelector(s);
+const BRL=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const INT=new Intl.NumberFormat('pt-BR');
+const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function addMonths(iso,m){const [y,mo,d]=iso.split('-').map(Number);const dt=new Date(y,mo-1+m,d);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0')}
+function diffDays(a,b){return Math.round((Date.parse(b+'T12:00:00')-Date.parse(a+'T12:00:00'))/864e5)}
+function fmtDate(iso){if(!iso)return '';const [y,m,d]=iso.split('-');return d+'/'+m+'/'+y}
+function fmtShort(iso){if(!iso)return '—';const [y,m,d]=iso.split('-');return d+'/'+m}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function parseMoney(s){s=String(s||'').trim();if(!s)return 0;s=s.replace(/[^\d,.-]/g,'');if(s.includes(',')){s=s.replace(/\./g,'').replace(',','.')}else if((s.match(/\./g)||[]).length>1||/\.\d{3}$/.test(s)){s=s.replace(/\./g,'')}const n=parseFloat(s);return isFinite(n)&&n>0?Math.round(n*100)/100:0}
+function parseKm(s){const n=parseInt(String(s||'').replace(/\D/g,''),10);return isFinite(n)?n:0}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function svg(path,size){return '<svg width="'+(size||20)+'" height="'+(size||20)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+path+'"/></svg>'}
+
+/* ---------- estado ---------- */
+function demoData(){
+  const y=new Date().getFullYear();
+  const mk=(desc,cat,date,km,value,shop,nextKm,nextDate,notes,parts)=>({id:uid(),desc,cat,date,km,value,shop,nextKm:nextKm||0,nextDate:nextDate||'',notes:notes||'',parts:parts||[],demo:true});
+  return [
+    mk('Troca de óleo 5W30','oleo',addMonths(todayISO(),-1),48200,389.9,'Auto Center Silva',58200,'','Óleo sintético, 4 litros',['oleo_motor','filtro_oleo','filtro_cabine']),
+    mk('Troca de óleo 5W30','oleo',addMonths(todayISO(),-10),38300,459.9,'Auto Center Silva',48300,'','',['oleo_motor','filtro_oleo','filtro_ar','filtro_comb']),
+    mk('Alinhamento e balanceamento','pneus',addMonths(todayISO(),-3),46900,160,'Pneus Centro',56900,''),
+    mk('Pastilhas de freio dianteiras','freios',addMonths(todayISO(),-5),45100,420,'Auto Center Silva',65100,''),
+    mk('Revisão dos 45 mil km','revisao',addMonths(todayISO(),-6),44800,890,'Concessionária',55000,addMonths(todayISO(),6)),
+    mk('Licenciamento anual','docs',addMonths(todayISO(),-11),43900,160.22,'Detran','',addMonths(todayISO(),1)),
+    mk('Bateria 60Ah','eletrica',addMonths(todayISO(),-14),41500,520,'Baterias Express','','','Garantia de 18 meses')
+  ];
+}
+let S={vehicle:{name:'',plate:'',year:'',km:0},entries:[],hide:false,lastBackup:'',demo:true};
+let storageOK=true;
+try{
+  const raw=localStorage.getItem(KEY);
+  if(raw){const d=JSON.parse(raw);if(d&&Array.isArray(d.entries)){S=Object.assign(S,d);S.vehicle=Object.assign({name:'',plate:'',year:'',km:0},d.vehicle||{})}}
+  else{S.entries=demoData();S.demo=true}
+}catch(e){storageOK=false;S.entries=demoData()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}catch(e){storageOK=false}}
+function realEntries(){return S.entries.filter(e=>!e.demo)}
+function hasDemo(){return S.entries.some(e=>e.demo)}
+function currentKm(){return Math.max(S.vehicle.km||0,...S.entries.map(e=>e.km||0),0)}
+function money(v){return S.hide?'R$ ••••':BRL.format(v||0)}
+
+/* ---------- alertas ---------- */
+function dueItems(){
+  const kmNow=currentKm(),t=todayISO(),out=[];
+  for(const e of S.entries){
+    if(!e.nextKm&&!e.nextDate)continue;
+    const newer=S.entries.some(o=>o!==e&&o.cat===e.cat&&(e.cat!=='outros'||o.desc.trim().toLowerCase()===e.desc.trim().toLowerCase())&&(o.date>e.date||(o.date===e.date&&(o.km||0)>(e.km||0))));
+    if(newer)continue;
+    const kmLeft=e.nextKm?e.nextKm-kmNow:null;
+    const days=e.nextDate?diffDays(t,e.nextDate):null;
+    let level='ok';
+    if((kmLeft!==null&&kmLeft<=0)||(days!==null&&days<=0))level='bad';
+    else if((kmLeft!==null&&kmLeft<=1000)||(days!==null&&days<=30))level='warn';
+    const parts=[];
+    if(kmLeft!==null)parts.push(kmLeft<=0?'Passou '+INT.format(-kmLeft)+' km':'Faltam '+INT.format(kmLeft)+' km');
+    if(days!==null)parts.push(days<0?'Venceu há '+(-days)+' dias':days===0?'Vence hoje':days<=60?'Em '+days+' dias':'Até '+fmtDate(e.nextDate));
+    const score=Math.min(kmLeft!==null?kmLeft/40:1e9,days!==null?days:1e9);
+    out.push({e,level,label:parts.join(' · '),score,pill:level==='bad'?'Vencida':level==='warn'?'Em breve':'Em dia'});
+  }
+  return out.sort((a,b)=>a.score-b.score);
+}
+
+/* ---------- render ---------- */
+let view='home',filter='all',query='';
+function render(){
+  $('#carName').textContent=S.vehicle.name||'Seu carro';
+  $('#plate').textContent=[S.vehicle.plate&&S.vehicle.plate.toUpperCase(),S.vehicle.year].filter(Boolean).join(' · ')||'Meu veículo';
+  $('#eyeBtn').innerHTML=svg(S.hide?'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c6 0 9.5 7 9.5 7a17 17 0 0 1-2.8 3.6M6.1 6.1C3.8 7.7 2.5 12 2.5 12S6 19 12 19a9.6 9.6 0 0 0 4-.9':'M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5z',18);
+  $('#eyeBtn').setAttribute('aria-label',S.hide?'Mostrar valores':'Ocultar valores');
+  renderHome();renderSummary();renderSettings();
+}
+function renderHome(){
+  const E=S.entries,total=E.reduce((a,e)=>a+(e.value||0),0);
+  const y=String(new Date().getFullYear());
+  const yearTotal=E.filter(e=>e.date.startsWith(y)).reduce((a,e)=>a+(e.value||0),0);
+  const last=[...E].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  $('#heroTotal').textContent=money(total);
+  $('#heroSub').textContent=E.length?E.length+(E.length===1?' serviço registrado':' serviços registrados'):'Nenhum serviço registrado ainda';
+  $('#heroKm').textContent=INT.format(currentKm());
+  $('#heroYear').textContent=S.hide?'••••':BRL.format(yearTotal).replace(/,\d\d$/,'');
+  $('#heroLast').textContent=last?fmtShort(last.date):'—';
+
+  // banners
+  let b='';
+  if(hasDemo())b+='<div class="banner"><div><b>Dados de exemplo.</b> Eles somem sozinhos quando você salvar o primeiro registro seu.</div><button class="act" data-act="clearDemo">Limpar</button></div>';
+  const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+  if(isIOS&&!standalone&&!S.hideInstall)b+='<div class="banner"><div><b>Instale no iPhone:</b> toque em Compartilhar e depois em "Adicionar à Tela de Início".</div><button class="act" data-act="hideInstall">Ok</button></div>';
+  if(!storageOK)b+='<div class="banner warn"><div><b>Este navegador não está guardando os dados.</b> Salve um backup antes de fechar.</div></div>';
+  const real=realEntries().length;
+  if(real>=3&&(!S.lastBackup||diffDays(S.lastBackup,todayISO())>30))b+='<div class="banner"><div><b>Faça um backup.</b> '+(S.lastBackup?'O último foi em '+fmtDate(S.lastBackup)+'.':'Você ainda não salvou nenhum.')+'</div><button class="act" data-act="goBackup">Salvar</button></div>';
+  $('#banners').innerHTML=b;$('#banners').hidden=!b;
+
+  // próximas
+  const due=dueItems().slice(0,view==='due'?99:4);
+  $('#dueList').innerHTML=due.length?due.map(d=>{const c=CAT[d.e.cat]||CAT.outros;return '<button class="due row" data-id="'+d.e.id+'"><span class="cat-ic" style="background:'+c.color+'">'+svg(c.icon,19)+'</span><span class="t"><b>'+esc(d.e.desc)+'</b><span class="num">'+esc(d.label)+'</span></span><span class="pill '+d.level+'">'+d.pill+'</span></button>'}).join('')
+    :'<div class="empty">Sem alertas. Ao registrar um serviço, preencha "Próxima troca" para ser avisado aqui.</div>';
+
+  // filtros
+  const used=new Set(E.map(e=>e.cat));
+  $('#filterChips').innerHTML='<button class="chip" data-f="all" aria-pressed="'+(filter==='all')+'">Todos</button>'+CATS.filter(c=>used.has(c.id)).map(c=>'<button class="chip" data-f="'+c.id+'" aria-pressed="'+(filter===c.id)+'">'+c.name+'</button>').join('');
+
+  // extrato
+  const q=query.trim().toLowerCase();
+  const list=E.filter(e=>(filter==='all'||e.cat===filter)&&(!q||(e.desc+' '+(e.shop||'')+' '+(e.notes||'')+' '+(CAT[e.cat]||CAT.outros).name+' '+partsOf(e).map(p=>PART[p].name).join(' ')).toLowerCase().includes(q)))
+    .sort((a,b)=>b.date.localeCompare(a.date)||(b.km||0)-(a.km||0));
+  $('#countLbl').textContent=list.length?(list.length+' de '+E.length):'';
+  if(!list.length){$('#history').innerHTML='<div class="empty">'+(E.length?'Nada encontrado com esse filtro.':'Toque no + para registrar a primeira manutenção.')+'</div>';return}
+  const groups=[];for(const e of list){const k=e.date.slice(0,7);let g=groups[groups.length-1];if(!g||g.k!==k){g={k,items:[],sum:0};groups.push(g)}g.items.push(e);g.sum+=e.value||0}
+  $('#history').innerHTML=groups.map(g=>{const [yy,mm]=g.k.split('-');return '<div class="month"><span>'+MONTHS[+mm-1]+' '+yy+'</span><span class="num">'+money(g.sum)+'</span></div>'+g.items.map(e=>{const c=CAT[e.cat]||CAT.outros;const sub=[e.km?INT.format(e.km)+' km':'',e.shop].filter(Boolean).join(' · ');return '<button class="row" data-id="'+e.id+'"><span class="cat-ic" style="background:'+c.color+'">'+svg(c.icon,19)+'</span><span class="t"><b>'+esc(e.desc)+(e.demo?'<span class="tag">exemplo</span>':'')+'</b><span class="num">'+esc(sub||c.name)+'</span>'+(partsOf(e).length?'<span class="pl">'+partsOf(e).map(p=>'<em>'+PART[p].name.replace('Filtro d','F. d').replace('o ar-condicionado','o ar-cond.')+'</em>').join('')+'</span>':'')+'</span><span class="v"><b class="num">'+(e.value?money(e.value):'—')+'</b><span class="num">'+fmtShort(e.date)+'</span></span></button>'}).join('')}).join('');
+}
+function renderSummary(){
+  const E=S.entries,total=E.reduce((a,e)=>a+(e.value||0),0);
+  const kms=E.map(e=>e.km).filter(Boolean),dates=E.map(e=>e.date).sort();
+  const span=kms.length>1?Math.max(...kms)-Math.min(...kms):0;
+  const months=dates.length>1?Math.max(1,diffDays(dates[0],dates[dates.length-1])/30.44):1;
+  const avg=E.length?total/E.length:0;
+  const k=[['Total gasto',money(total)],['Média por mês',money(E.length?total/months:0)],['Custo por km',span?(S.hide?'••••':BRL.format(total/span)):'—'],['Ticket médio',money(avg)]];
+  $('#kpis').innerHTML=k.map(x=>'<div class="kpi"><small>'+x[0]+'</small><b class="num">'+x[1]+'</b></div>').join('');
+  const byCat={};E.forEach(e=>{byCat[e.cat]=(byCat[e.cat]||0)+(e.value||0)});
+  const cats=Object.entries(byCat).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  const max=cats.length?cats[0][1]:1;
+  $('#catBars').innerHTML=cats.length?cats.map(([id,v])=>{const c=CAT[id]||CAT.outros;return '<div class="bar-row"><span class="n"><i style="background:'+c.color+'"></i>'+c.name+' <span class="pct num">'+Math.round(v/total*100)+'%</span></span><span class="amt num">'+money(v)+'</span><span class="track"><i style="width:'+Math.max(3,v/max*100)+'%;background:'+c.color+'"></i></span></div>'}).join(''):'<div class="empty">Sem valores ainda.</div>';
+  const kmNow=currentKm(),t=todayISO();
+  $('#lastParts').innerHTML=PARTS.map(p=>{
+    const last=E.filter(e=>partsOf(e).includes(p.id)).sort((a,b)=>b.date.localeCompare(a.date)||(b.km||0)-(a.km||0))[0];
+    if(!last)return '<div class="lastp"><span class="t"><b>'+p.name+'</b><span>Nenhuma troca registrada</span></span></div>';
+    const kmAgo=kmNow-(last.km||0),months=Math.floor(diffDays(last.date,t)/30.44);
+    return '<div class="lastp"><span class="t"><b>'+p.name+'</b><span class="num">'+fmtDate(last.date)+' · '+INT.format(last.km||0)+' km</span></span><span class="ago num">'+(kmAgo>0?'há '+INT.format(kmAgo)+' km':'agora')+'<br>'+(months>0?'há '+months+(months===1?' mês':' meses'):'este mês')+'</span></div>';
+  }).join('');
+  const byYear={};E.forEach(e=>{const y=e.date.slice(0,4);byYear[y]=(byYear[y]||0)+(e.value||0)});
+  const ys=Object.entries(byYear).sort((a,b)=>b[0].localeCompare(a[0]));const ym=Math.max(1,...ys.map(x=>x[1]));
+  $('#yearBars').innerHTML=ys.length?ys.map(([y,v])=>'<div class="bar-row"><span class="n num">'+y+'</span><span class="amt num">'+money(v)+'</span><span class="track"><i style="width:'+Math.max(3,v/ym*100)+'%;background:var(--accent)"></i></span></div>').join(''):'<div class="empty">Sem valores ainda.</div>';
+}
+function renderSettings(){
+  if(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#vehForm'))return;
+  $('#vName').value=S.vehicle.name||'';$('#vPlate').value=S.vehicle.plate||'';$('#vYear').value=S.vehicle.year||'';$('#vKm').value=S.vehicle.km?INT.format(S.vehicle.km):'';
+  $('#lastBackup').textContent=S.lastBackup?'Último: '+fmtDate(S.lastBackup):'Nenhum backup ainda';
+}
+document.querySelectorAll('[data-ic]').forEach(el=>{const id=el.dataset.ic;el.innerHTML=id==='km'?svg('M4 15a8 8 0 1 1 16 0M12 15l4-5M4 19h16',22):svg(CAT[id].icon,22)});
+
+/* ---------- navegação ---------- */
+function go(v){
+  view=v;
+  const showHome=v==='home'||v==='due';
+  $('#view-home').hidden=!showHome;$('#view-summary').hidden=v!=='summary';$('#view-settings').hidden=v!=='settings';
+  document.querySelectorAll('.tab').forEach(t=>{if(t.dataset.view===v)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current')});
+  renderHome();
+  if(v==='due'){const el=$('#dueList');el.scrollIntoView({behavior:'smooth',block:'start'})}else window.scrollTo({top:0});
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>go(t.dataset.view)));
+$('#topSettings').addEventListener('click',()=>go('settings'));
+$('#eyeBtn').addEventListener('click',()=>{S.hide=!S.hide;save();render()});
+$('#q').addEventListener('input',e=>{query=e.target.value;renderHome()});
+$('#filterChips').addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(!b)return;filter=b.dataset.f;renderHome()});
+$('#banners').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;if(b.dataset.act==='clearDemo'){S.entries=realEntries();S.demo=false;save();render();toast('Exemplos removidos')}if(b.dataset.act==='goBackup')go('settings');if(b.dataset.act==='hideInstall'){S.hideInstall=true;save();renderHome()}});
+document.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-quick]');if(!b)return;if(b.dataset.quick==='km')openKm();else openForm(null,b.dataset.quick)});
+$('#view-home').addEventListener('click',e=>{const r=e.target.closest('.row[data-id]');if(!r)return;const en=S.entries.find(x=>x.id===r.dataset.id);if(en)openForm(en)});
+$('#fab').addEventListener('click',()=>openForm(null));
+
+/* ---------- formulário ---------- */
+let editing=null,pickedCat='oleo',delArmed=null,pickedParts=new Set();
+function paintCats(){$('#catPick').innerHTML=CATS.map(c=>'<button type="button" data-c="'+c.id+'" aria-pressed="'+(pickedCat===c.id)+'"><i style="background:'+c.color+'">'+svg(c.icon,13)+'</i>'+c.name+'</button>').join('');paintNextQuick();paintParts()}
+function paintParts(){
+  const show=PART_CATS.includes(pickedCat);$('#partsField').hidden=!show;if(!show)return;
+  $('#partsPick').innerHTML=PARTS.map(p=>'<button type="button" class="part" data-p="'+p.id+'" aria-pressed="'+pickedParts.has(p.id)+'"><span class="box">'+svg('M5 12.5l4.5 4.5L19 7.5',14)+'</span>'+p.name+'</button>').join('');
+  $('#partsAll').textContent=pickedParts.size===PARTS.length?'Desmarcar tudo':'Marcar tudo';
+}
+$('#partsPick').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;const id=b.dataset.p;pickedParts.has(id)?pickedParts.delete(id):pickedParts.add(id);paintParts()});
+$('#partsAll').addEventListener('click',()=>{pickedParts=pickedParts.size===PARTS.length?new Set():new Set(PARTS.map(p=>p.id));paintParts()});
+function paintNextQuick(){
+  const c=CAT[pickedCat],ev=c&&c.every;let h='';
+  if(ev){if(ev.km)h+='<button type="button" class="chip" data-nk="'+ev.km+'">+'+INT.format(ev.km)+' km</button>';if(ev.km&&ev.km!==5000)h+='<button type="button" class="chip" data-nk="5000">+5.000 km</button>';if(ev.months)h+='<button type="button" class="chip" data-nm="'+ev.months+'">+'+ev.months+(ev.months===1?' mês':' meses')+'</button>'}
+  else h='<button type="button" class="chip" data-nk="10000">+10.000 km</button><button type="button" class="chip" data-nm="12">+12 meses</button>';
+  $('#nextQuick').innerHTML=h;
+}
+$('#catPick').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;pickedCat=b.dataset.c;paintCats()});
+$('#nextQuick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.nk){const base=parseKm($('#fKm').value)||currentKm();$('#fNextKm').value=INT.format(base+(+b.dataset.nk))}
+  if(b.dataset.nm){$('#fNextDate').value=addMonths($('#fDate').value||todayISO(),+b.dataset.nm)}});
+$('#fKm').addEventListener('input',e=>{const n=parseKm(e.target.value);e.target.value=n?INT.format(n):''});
+$('#fNextKm').addEventListener('input',e=>{const n=parseKm(e.target.value);e.target.value=n?INT.format(n):''});
+$('#vKm').addEventListener('input',e=>{const n=parseKm(e.target.value);e.target.value=n?INT.format(n):''});
+$('#kmNow').addEventListener('input',e=>{const n=parseKm(e.target.value);e.target.value=n?INT.format(n):''});
+$('#fValue').addEventListener('blur',e=>{const v=parseMoney(e.target.value);e.target.value=v?v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):''});
+
+function openForm(en,cat){
+  editing=en||null;pickedCat=en?en.cat:(cat||'oleo');delArmed=null;
+  pickedParts=new Set(en?partsOf(en):(pickedCat==='oleo'?['oleo_motor','filtro_oleo']:[]));
+  $('#formTitle').textContent=en?'Editar registro':'Nova manutenção';
+  $('#fDesc').value=en?en.desc:'';
+  $('#fValue').value=en&&en.value?en.value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
+  $('#fDate').value=en?en.date:todayISO();
+  $('#fKm').value=en?(en.km?INT.format(en.km):''):(currentKm()?INT.format(currentKm()):'');
+  $('#fShop').value=en?en.shop||'':'';
+  $('#fNextKm').value=en&&en.nextKm?INT.format(en.nextKm):'';
+  $('#fNextDate').value=en?en.nextDate||'':'';
+  $('#fNotes').value=en?en.notes||'':'';
+  $('#formErr').textContent='';
+  $('#delBtn').hidden=!en;$('#delBtn').textContent='Excluir';$('#delBtn').classList.remove('armed');
+  const shops=[...new Set(S.entries.map(e=>e.shop).filter(Boolean))];
+  $('#shopList').innerHTML=shops.map(s=>'<option value="'+esc(s)+'">').join('');
+  paintCats();$('#overlay').hidden=false;document.body.style.overflow='hidden';
+  if(!en)setTimeout(()=>$('#fDesc').focus(),60);
+}
+function closeForm(){$('#overlay').hidden=true;document.body.style.overflow=''}
+$('#closeForm').addEventListener('click',closeForm);
+$('#overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeForm()});
+$('#entryForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const usesParts=PART_CATS.includes(pickedCat);
+  const parts=usesParts?PARTS.map(p=>p.id).filter(id=>pickedParts.has(id)):[];
+  let desc=$('#fDesc').value.trim();const date=$('#fDate').value,km=parseKm($('#fKm').value);
+  if(!desc&&parts.length)desc=pickedCat==='oleo'?'Troca de óleo':'Troca de filtros';
+  if(!desc){$('#formErr').textContent='Escreva uma descrição, por exemplo "Troca de óleo".';$('#fDesc').focus();return}
+  if(!date){$('#formErr').textContent='Escolha a data do serviço.';return}
+  if(!km){$('#formErr').textContent='Informe a quilometragem do carro no dia do serviço.';$('#fKm').focus();return}
+  const data={desc,cat:pickedCat,date,km,value:parseMoney($('#fValue').value),shop:$('#fShop').value.trim(),nextKm:parseKm($('#fNextKm').value),nextDate:$('#fNextDate').value,notes:$('#fNotes').value.trim(),parts};
+  if(data.nextKm&&data.nextKm<=km){$('#formErr').textContent='O KM da próxima troca precisa ser maior que o KM atual do serviço.';return}
+  let msg;
+  if(editing){Object.assign(editing,data);delete editing.demo;msg='Registro atualizado'}
+  else{if(hasDemo()){S.entries=realEntries();S.demo=false}S.entries.push(Object.assign({id:uid()},data));msg='Manutenção salva'}
+  save();closeForm();render();toast(storageOK?msg:'Salvo só nesta sessão. Faça um backup.');
+});
+$('#delBtn').addEventListener('click',()=>{
+  if(!editing)return;
+  if(!delArmed){$('#delBtn').textContent='Toque de novo';$('#delBtn').classList.add('armed');delArmed=setTimeout(()=>{delArmed=null;$('#delBtn').textContent='Excluir';$('#delBtn').classList.remove('armed')},3000);return}
+  clearTimeout(delArmed);S.entries=S.entries.filter(x=>x!==editing);save();closeForm();render();toast('Registro excluído');
+});
+
+/* ---------- KM ---------- */
+function openKm(){$('#kmNow').value=currentKm()?INT.format(currentKm()):'';$('#kmOverlay').hidden=false;document.body.style.overflow='hidden';setTimeout(()=>$('#kmNow').select(),60)}
+function closeKm(){$('#kmOverlay').hidden=true;document.body.style.overflow=''}
+$('#closeKm').addEventListener('click',closeKm);
+$('#kmOverlay').addEventListener('click',e=>{if(e.target.id==='kmOverlay')closeKm()});
+$('#kmForm').addEventListener('submit',e=>{e.preventDefault();const n=parseKm($('#kmNow').value);if(!n)return;S.vehicle.km=n;save();closeKm();render();toast('KM atualizado para '+INT.format(n))});
+
+/* ---------- veículo ---------- */
+$('#vehForm').addEventListener('submit',e=>{e.preventDefault();
+  S.vehicle={name:$('#vName').value.trim(),plate:$('#vPlate').value.trim().toUpperCase(),year:$('#vYear').value.replace(/\D/g,'').slice(0,4),km:parseKm($('#vKm').value)};
+  save();document.activeElement.blur();render();toast('Veículo salvo')});
+
+/* ---------- backup ---------- */
+function backupText(){return JSON.stringify({app:'diario-do-carro',version:1,exportedAt:new Date().toISOString(),vehicle:S.vehicle,entries:realEntries()},null,1)}
+function stamp(){return todayISO()}
+async function offer(filename,data){
+  const mime=filename.endsWith('.csv')?'text/csv':'application/json';
+  const blob=new Blob([data],{type:mime});
+  try{
+    const file=new File([blob],filename,{type:mime});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:filename});return true}
+  }catch(err){if(err&&err.name==='AbortError'){toast('Cancelado');return false}}
+  try{
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);return true;
+  }catch(e){}
+  $('#pasteBox').hidden=false;$('#pasteTa').value=data;
+  try{await navigator.clipboard.writeText(data);toast('Texto copiado: cole num lugar seguro.');return true}
+  catch(e){$('#pasteTa').focus();$('#pasteTa').select();toast('Selecionei o texto: copie e guarde num lugar seguro.');return false}
+}
+$('#exportJson').addEventListener('click',async()=>{
+  if(!realEntries().length&&!S.vehicle.name){toast('Ainda não há registros seus para salvar');return}
+  const ok=await offer('diario-do-carro-backup-'+stamp()+'.json',backupText());
+  if(ok){S.lastBackup=todayISO();save();render();toast('Backup salvo')}
+});
+$('#exportCsv').addEventListener('click',()=>{
+  const rows=[['Data','Categoria','Descrição','Itens trocados','KM','Valor (R$)','Oficina','Próxima troca KM','Próxima troca data','Observações']];
+  [...realEntries()].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>rows.push([fmtDate(e.date),(CAT[e.cat]||CAT.outros).name,e.desc,partsOf(e).map(p=>PART[p].name).join(', '),e.km||'',(e.value||0).toFixed(2).replace('.',','),e.shop||'',e.nextKm||'',fmtDate(e.nextDate),e.notes||'']));
+  if(rows.length<2){toast('Ainda não há registros seus para exportar');return}
+  const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(';')).join('\r\n');
+  offer('diario-do-carro-'+stamp()+'.csv',csv);
+});
+$('#copyBtn').addEventListener('click',()=>{$('#pasteBox').hidden=!$('#pasteBox').hidden});
+$('#copyNow').addEventListener('click',async()=>{const t=backupText();$('#pasteTa').value=t;
+  try{await navigator.clipboard.writeText(t);S.lastBackup=todayISO();save();renderSettings();toast('Dados copiados. Cole num lugar seguro.')}
+  catch(e){$('#pasteTa').focus();$('#pasteTa').select();toast('Texto selecionado: copie manualmente.')}});
+let pending=null;
+function readBackup(text){
+  let d;try{d=JSON.parse(text)}catch(e){toast('Esse arquivo não é um backup válido do Diário do Carro.');return}
+  if(!d||!Array.isArray(d.entries)){toast('Esse arquivo não é um backup válido do Diário do Carro.');return}
+  const entries=d.entries.filter(e=>e&&e.desc&&e.date).map(e=>({id:e.id||uid(),desc:String(e.desc).slice(0,90),cat:CAT[e.cat]?e.cat:'outros',date:String(e.date).slice(0,10),km:parseKm(e.km),value:Number(e.value)||0,shop:String(e.shop||'').slice(0,60),nextKm:parseKm(e.nextKm),nextDate:String(e.nextDate||'').slice(0,10),notes:String(e.notes||'').slice(0,500),parts:Array.isArray(e.parts)?e.parts.filter(p=>PART[p]):[]}));
+  pending={vehicle:Object.assign({name:'',plate:'',year:'',km:0},d.vehicle||{}),entries};
+  $('#importInfo').innerHTML='<b>'+entries.length+' registros</b> encontrados'+(pending.vehicle.name?' do veículo <b>'+esc(pending.vehicle.name)+'</b>':'')+(d.exportedAt?', backup de '+fmtDate(String(d.exportedAt).slice(0,10)):'')+'. Como quer restaurar?';
+  $('#importConfirm').hidden=false;$('#importConfirm').scrollIntoView({behavior:'smooth',block:'center'});
+}
+$('#importBtn').addEventListener('click',()=>$('#fileIn').click());
+$('#fileIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>readBackup(String(r.result));r.readAsText(f);e.target.value=''});
+$('#pasteNow').addEventListener('click',()=>{const t=$('#pasteTa').value.trim();if(!t){toast('Cole o texto do backup primeiro');return}readBackup(t)});
+function finishImport(mode){
+  if(!pending)return;
+  if(mode==='replace'){S.entries=pending.entries;S.vehicle=pending.vehicle}
+  else{const ids=new Set(realEntries().map(e=>e.id));S.entries=realEntries().concat(pending.entries.filter(e=>!ids.has(e.id)));if(!S.vehicle.name)S.vehicle=Object.assign({},pending.vehicle,{km:Math.max(S.vehicle.km||0,pending.vehicle.km||0)})}
+  S.demo=false;const n=pending.entries.length;pending=null;$('#importConfirm').hidden=true;save();render();go('home');toast(n+' registros restaurados');
+}
+$('#impReplace').addEventListener('click',()=>finishImport('replace'));
+$('#impMerge').addEventListener('click',()=>finishImport('merge'));
+$('#impCancel').addEventListener('click',()=>{pending=null;$('#importConfirm').hidden=true});
+
+let wipeArmed=null;
+$('#wipeBtn').addEventListener('click',()=>{
+  if(!wipeArmed){$('#wipeBtn').textContent='Toque de novo para apagar tudo';$('#wipeBtn').classList.add('armed');wipeArmed=setTimeout(()=>{wipeArmed=null;$('#wipeBtn').textContent='Apagar todos os registros';$('#wipeBtn').classList.remove('armed')},3500);return}
+  clearTimeout(wipeArmed);wipeArmed=null;S.entries=[];S.demo=false;save();$('#wipeBtn').textContent='Apagar todos os registros';$('#wipeBtn').classList.remove('armed');render();toast('Todos os registros foram apagados');
+});
+
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeForm();closeKm()}});
+
+render();
+if('serviceWorker' in navigator){addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})})}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+})();
+</script>
+</body>
+</html>
