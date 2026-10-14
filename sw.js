@@ -1,8 +1,8 @@
 // Diário do Carro — funciona sem internet.
 // Ao publicar uma versão nova do app, troque o número abaixo.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'diario-carro-' + VERSION;
-const SHELL = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
+const SHELL = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon-v2.png', './icon-192-v2.png', './icon-512-v2.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
